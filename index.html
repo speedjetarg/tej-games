@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Dachshund Dash</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,21 +13,26 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      min-height: 100vh;
+      height: 100dvh;
       font-family: 'Courier New', monospace;
       overflow: hidden;
+      touch-action: none;
     }
 
     h1 {
-      font-size: 1.6rem;
+      font-size: clamp(1rem, 4vw, 1.6rem);
       color: #5a3e28;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       letter-spacing: 2px;
       text-transform: uppercase;
     }
 
     #game-wrapper {
       position: relative;
+      width: 100%;
+      max-width: 820px;
+      padding: 0 8px;
     }
 
     canvas {
@@ -35,6 +40,36 @@
       border-radius: 4px;
       background: #fffdf7;
       display: block;
+      width: 100%;
+      height: auto;
+      touch-action: none;
+    }
+
+    /* on-screen duck button */
+    #duck-btn {
+      display: none;
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: 64px;
+      height: 40px;
+      background: rgba(90,62,40,0.75);
+      color: #fffdf7;
+      border: 2px solid #5a3e28;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    @media (pointer: coarse) {
+      #duck-btn { display: flex; }
     }
 
     #overlay {
@@ -86,10 +121,11 @@
     <div id="hi-display">HI 0</div>
     <div id="overlay">
       <h2>Dachshund Dash</h2>
-      <p>Press <strong>Space</strong> or <strong>↑</strong> to jump</p>
-      <p>Press <strong>↓</strong> to duck</p>
+      <p><strong>Tap</strong> or <strong>Space / ↑</strong> to jump</p>
+      <p><strong>Hold bottom</strong> or <strong>↓</strong> to duck</p>
       <p style="margin-top:12px; font-size:0.85rem; color:#a08060;">Avoid the hotdog towers!</p>
     </div>
+    <button id="duck-btn" aria-label="Duck">▼<br>duck</button>
   </div>
 
   <script>
@@ -180,6 +216,45 @@
       else jump();
     });
 
+    // ── touch controls ────────────────────────────────────────────
+    let touchStartY = 0;
+
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      touchStartY = t.clientY;
+
+      // tap on bottom quarter of canvas = duck; otherwise jump/start
+      const rect = canvas.getBoundingClientRect();
+      const relY = (t.clientY - rect.top) / rect.height;
+
+      if (state === 'idle' || state === 'dead') {
+        startGame();
+      } else if (relY > 0.65) {
+        dog.ducking = true;
+      } else {
+        jump();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (state !== 'running') return;
+      const t = e.changedTouches[0];
+      // swipe down gesture = duck
+      if (t.clientY - touchStartY > 20) dog.ducking = true;
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+      e.preventDefault();
+      dog.ducking = false;
+    }, { passive: false });
+
+    // on-screen duck button
+    const duckBtn = document.getElementById('duck-btn');
+    duckBtn.addEventListener('touchstart', e => { e.preventDefault(); dog.ducking = true; }, { passive: false });
+    duckBtn.addEventListener('touchend',   e => { e.preventDefault(); dog.ducking = false; }, { passive: false });
+
     // ── start / reset ─────────────────────────────────────────────
     function startGame() {
       score = 0;
@@ -206,7 +281,7 @@
       overlay.innerHTML = `
         <h2>Woof! 💀</h2>
         <p>Score: <strong>${score}</strong></p>
-        <p style="margin-top:8px">Press <strong>Space</strong> / click to try again</p>
+        <p style="margin-top:8px">Tap or press <strong>Space</strong> to try again</p>
       `;
       overlay.style.display = 'flex';
     }
