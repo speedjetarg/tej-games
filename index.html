@@ -215,6 +215,13 @@
       if (state === 'idle' || state === 'dead') startGame();
       else jump();
     });
+    overlay.addEventListener('click', () => {
+      if (state === 'idle' || state === 'dead') startGame();
+    });
+    overlay.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (state === 'idle' || state === 'dead') startGame();
+    }, { passive: false });
 
     // ── touch controls ────────────────────────────────────────────
     let touchStartY = 0;
@@ -224,13 +231,12 @@
       const t = e.changedTouches[0];
       touchStartY = t.clientY;
 
-      // tap on bottom quarter of canvas = duck; otherwise jump/start
+      if (state !== 'running') return; // overlay handles idle/dead
+
+      // tap on bottom 35% of canvas = duck; otherwise jump
       const rect = canvas.getBoundingClientRect();
       const relY = (t.clientY - rect.top) / rect.height;
-
-      if (state === 'idle' || state === 'dead') {
-        startGame();
-      } else if (relY > 0.65) {
+      if (relY > 0.65) {
         dog.ducking = true;
       } else {
         jump();
